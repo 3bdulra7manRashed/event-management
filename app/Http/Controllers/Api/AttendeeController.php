@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AttendeeResource;
+use App\Models\Attendee;
+use App\Models\Event;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use App\Http\Resources\AttendeeResource;
-use App\Models\Event;
-class AttendeeController extends Controller implements HasMiddleware
+use Illuminate\Support\Facades\Gate;
 
+class AttendeeController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
     {
@@ -19,6 +22,7 @@ class AttendeeController extends Controller implements HasMiddleware
             new Middleware('auth:sanctum', except: ['index']),
         ];
     }
+
     /**
      * Display a listing of the resource.
      */
@@ -27,7 +31,7 @@ class AttendeeController extends Controller implements HasMiddleware
         $attendees = $event->attendees()->with('user')->paginate();
 
         return AttendeeResource::collection($attendees);
-        
+
     }
 
     /**
@@ -46,15 +50,19 @@ class AttendeeController extends Controller implements HasMiddleware
         ]);
 
         return (new AttendeeResource($attendee->load('user')))
-        ->response()
-        ->setStatusCode(201);
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Event $event, Attendee $attendee): Response
     {
-        //
+        Gate::authorize('delete', $attendee);
+
+        $attendee->delete();
+
+        return response()->noContent();
     }
 }
